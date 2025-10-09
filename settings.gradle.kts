@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "My_AppEsmeralda"
 include(":app")
- 
+include(":celular")

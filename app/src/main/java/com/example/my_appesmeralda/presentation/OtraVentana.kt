@@ -10,7 +10,10 @@ import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import com.example.my_appesmeralda.R
 import android.Manifest
+import android.net.Uri
 import android.util.Log
+import com.google.android.gms.wearable.CapabilityClient
+import com.google.android.gms.wearable.Wearable
 
 
 class OtraVentana: ComponentActivity(), SensorEventListener{
@@ -26,6 +29,10 @@ class OtraVentana: ComponentActivity(), SensorEventListener{
         sensor= sensorManager.getDefaultSensor(sensorType)
 
         setContentView(R.layout.otra_ventana)
+    }
+
+    private fun sendMessage(){
+        val sendMessageResult = Wearable.getMessageClient()
     }
 
 
@@ -51,15 +58,26 @@ class OtraVentana: ComponentActivity(), SensorEventListener{
         }
     }
 
-    override fun onPause() {
+
+    override fun onPause(){
         super.onPause()
-        sensorManager.unregisterListener(this)
+        try {
+            Wearable.getDataClient(activityContext!!).removeListener(this)
+            Wearable.getMessageClient(activityContext!!).removeListener(this)
+            Wearable.getCapabilityClient(activityContext!!).removeListener(this)
+        } catch (e:Exception){
+            e.printStackTrace()
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        sensor?.also{pressure->
-            sensorManager.registerListener(this, pressure, SensorManager.SENSOR_DELAY_NORMAL)
+        try {
+            Wearable.getDataClient(activityContext!!).addListener(this)
+            Wearable.getDataClient(activityContext!!).addListener(this)
+            Wearable.getDataClient(activityContext!!).addListener(this, Uri.parse("wear://"),   CapabilityClient.FILTER_REACHABLE)
+        } catch (e: Exception){
+            e.printStackTrace()
         }
     }
 }
