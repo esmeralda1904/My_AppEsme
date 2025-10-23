@@ -39,12 +39,14 @@ class MainActivity : AppCompatActivity(),
     private val PAYLOAD_PATH = "/APP_OPEN"
     private lateinit var nodeID: String
 
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         activityContext = this
-        conectar = findViewById(R.id.button)
+        conectar = findViewById(R.id.  button)
 
         conectar.setOnClickListener {
             if (!deviceConnected) {
@@ -98,7 +100,6 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onDataChanged(p0: DataEventBuffer) {
-        // Puedes implementar aquí el manejo de datos
     }
 
     override fun onMessageReceived(ME: MessageEvent) {
@@ -109,7 +110,6 @@ class MainActivity : AppCompatActivity(),
     }
 
     override fun onCapabilityChanged(p0: CapabilityInfo) {
-        // Implementa aquí si necesitas manejar cambios de capacidad
     }
 }
 
@@ -120,6 +120,7 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         modifier = modifier
     )
 }
+
 
 @Preview(showBackground = true)
 @Composable

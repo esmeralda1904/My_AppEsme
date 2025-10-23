@@ -16,6 +16,8 @@ import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Wearable
 
 
+private val OtraVentana.activityContext: Any
+
 class OtraVentana: ComponentActivity(), SensorEventListener{
     private lateinit var sensorManager: SensorManager
     private var sensor:Sensor?=null
