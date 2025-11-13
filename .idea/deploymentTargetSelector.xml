@@ -2,25 +2,27 @@
 <project version="4">
   <component name="deploymentTargetSelector">
     <selectionStates>
-      <SelectionState runConfigName="app">
+      <SelectionState runConfigName="celular">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-10-08T16:24:26.195066Z">
+        <DropdownSelection timestamp="2025-11-13T15:26:32.135427Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/Alumno5/.android/avd/Wear_OS_Large_Round.avd" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=RFAX50968HB" />
             </handle>
           </Target>
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="app.MainTileService">
+      <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="app.MainComplicationService">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="celular">
-        <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2025-11-13T18:46:21.480456Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=RFAX50968HB" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
       </SelectionState>
     </selectionStates>
   </component>
