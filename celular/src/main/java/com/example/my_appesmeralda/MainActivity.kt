@@ -6,17 +6,14 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
-import android.widget.Toast
+import android.widget.TextView
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.*
 import kotlinx.coroutines.*
+import okhttp3.*
 import java.nio.charset.StandardCharsets
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.my_appesmeralda.ui.theme.My_AppEsmeraldaTheme
 
 class MainActivity : AppCompatActivity(),
     CoroutineScope by MainScope(),
@@ -24,94 +21,169 @@ class MainActivity : AppCompatActivity(),
     MessageClient.OnMessageReceivedListener,
     CapabilityClient.OnCapabilityChangedListener {
 
-    private lateinit var conectar: Button
+    private lateinit var botonConectar: Button
+    private lateinit var botonEnviar: Button
+    private lateinit var textInfo: TextView
+    private lateinit var textDatos: TextView
+    private lateinit var textDetalles: TextView
+
     private var activityContext: Context? = null
-    private var deviceConnected: Boolean = false
-    private val PAYLOAD_PATH = "/APP_OPEN"
+    private var deviceConnected = false
     private lateinit var nodeID: String
+    private lateinit var nodeName: String
+    private val client = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
         activityContext = this
-        conectar = findViewById(R.id.button)
+        botonConectar = findViewById(R.id.boton)
+        botonEnviar = findViewById(R.id.botonEnviar)
+        textInfo = findViewById(R.id.textinfo)
+        textDatos = findViewById(R.id.textDatos)
+        textDetalles = findViewById(R.id.textDetalles)
 
-        conectar.setOnClickListener {
+        botonConectar.setOnClickListener {
             if (!deviceConnected) {
                 val tempAct: Activity = activityContext as MainActivity
                 getNodes(tempAct)
+            } else {
+                textInfo.text = "Ya estás conectado al reloj"
+            }
+        }
+
+        botonEnviar.setOnClickListener {
+            val datos = textDatos.text.toString().trim()
+            if (datos.isNotBlank() && datos.contains("ritmo")) {
+                textInfo.text = "Enviando datos reales al servidor..."
+                sendSensorDataToServer(datos)
+            } else {
+                textInfo.text = "No hay datos válidos del reloj"
             }
         }
     }
 
     private fun getNodes(context: Context) {
-        launch(Dispatchers.Default) {
-            val nodeList = Wearable.getNodeClient(context).connectedNodes
+        launch(Dispatchers.IO) {
             try {
-                val nodes = Tasks.await(nodeList)
-                for (node in nodes) {
-                    Log.d("NODO", "ID del nodo: ${node.id}")
-                    nodeID = node.id
+                val nodes = Tasks.await(Wearable.getNodeClient(context).connectedNodes)
+                if (nodes.isNotEmpty()) {
+                    val nodo = nodes.first()
+                    nodeID = nodo.id
+                    nodeName = nodo.displayName
                     deviceConnected = true
+
+                    withContext(Dispatchers.Main) {
+                        textInfo.text = "Conectado al reloj"
+                        textDetalles.text = "Reloj: $nodeName\nID: $nodeID"
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        textInfo.text = "No se encontró ningún reloj conectado"
+                    }
                 }
-            } catch (exception: Exception) {
-                Log.d("ERROR en el nodo", exception.toString())
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    textInfo.text = "Error al conectar con el reloj: ${e.message}"
+                }
             }
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        activityContext?.let {
-            Wearable.getDataClient(it).removeListener(this)
-            Wearable.getMessageClient(it).removeListener(this)
-            Wearable.getCapabilityClient(it).removeListener(this)
+    override fun onMessageReceived(event: MessageEvent) {
+        if (event.path == "/SENSOR_DATA") {
+            val message = String(event.data, StandardCharsets.UTF_8)
+            Log.d("Mobile", "Datos recibidos del reloj: $message")
+
+            runOnUiThread {
+                val datos = message.split("|").map { it.trim() }
+
+                val builder = StringBuilder()
+                builder.append("Datos recibidos del reloj:\n\n")
+                for (dato in datos) {
+                    builder.append("• $dato\n")
+                }
+
+                textDatos.text = builder.toString()
+                textInfo.text = "Datos recibidos correctamente"
+
+                val horaActual = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+                textDetalles.text = "Reloj: $nodeName\nÚltimo dato: $horaActual"
+            }
+        }
+    }
+
+    private fun sendSensorDataToServer(sensorData: String) {
+        try {
+            Log.d("RAW_SENSOR", "Procesando datos: $sensorData")
+
+            val limpio = sensorData
+                .replace("bpm", "", ignoreCase = true)
+                .replace("lx", "", ignoreCase = true)
+                .replace("rad/s", "", ignoreCase = true)
+                .replace("[^0-9.|:-]".toRegex(), " ")
+                .replace("\\s+".toRegex(), " ")
+                .trim()
+
+            val numeros = Regex("""([0-9]+(?:\.[0-9]+)?)""").findAll(limpio).map { it.value }.toList()
+
+            if (numeros.size >= 3) {
+                val ritmo = numeros[0]
+                val luz = numeros[1]
+                val gyro = numeros[2]
+
+                val baseUrl = "https://eb1dd901f8e9.ngrok-free.app/smartphone/guardar_datos.php"
+                val url = "$baseUrl?ritmo=$ritmo&luz=$luz&gyro=$gyro"
+                Log.d("HTTP", "Enviando a: $url")
+
+                val request = Request.Builder()
+                    .url(url)
+                    .get()
+                    .build()
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val response = client.newCall(request).execute()
+                        val body = response.body?.string() ?: "Sin respuesta"
+                        Log.d("HTTP", "Respuesta del servidor: $body")
+
+                        withContext(Dispatchers.Main) {
+                            textInfo.text = "Datos reales enviados al servidor:\n$body"
+                        }
+                    } catch (e: Exception) {
+                        Log.e("HTTP", "Error HTTP: ${e.message}")
+                        withContext(Dispatchers.Main) {
+                            textInfo.text = "Error al enviar datos: ${e.message}"
+                        }
+                    }
+                }
+            } else {
+                textInfo.text = "No se pudieron leer correctamente los valores ($numeros)"
+                Log.e("Parse", "Datos insuficientes: $numeros")
+            }
+
+        } catch (e: Exception) {
+            textInfo.text = "Error procesando datos: ${e.message}"
         }
     }
 
     override fun onResume() {
         super.onResume()
-        activityContext?.let {
-            Wearable.getDataClient(it).addListener(this)
-            Wearable.getMessageClient(it).addListener(this)
-            Wearable.getCapabilityClient(it)
-                .addListener(this, Uri.parse("wear://"), CapabilityClient.FILTER_REACHABLE)
-        }
+        Wearable.getDataClient(this).addListener(this)
+        Wearable.getMessageClient(this).addListener(this)
+        Wearable.getCapabilityClient(this)
+            .addListener(this, Uri.parse("wear://"), CapabilityClient.FILTER_REACHABLE)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        Wearable.getDataClient(this).removeListener(this)
+        Wearable.getMessageClient(this).removeListener(this)
+        Wearable.getCapabilityClient(this).removeListener(this)
     }
 
     override fun onDataChanged(p0: DataEventBuffer) {}
-
-    override fun onMessageReceived(ME: MessageEvent) {
-        if (ME.path == "/sensor_data") { // 👈 Ruta del mensaje que manda el reloj
-            val message = String(ME.data, StandardCharsets.UTF_8)
-            Log.d("onMessageReceived", "Datos recibidos: $message")
-
-            runOnUiThread {
-                Toast.makeText(this, "Datos del reloj: $message", Toast.LENGTH_LONG).show()
-            }
-        } else {
-            Log.d("onMessageReceived", "Ruta no reconocida: ${ME.path}")
-        }
-    }
-
-    override fun onCapabilityChanged(info: CapabilityInfo) {
-        Log.d("CAPABILITY", "Cambiado: ${info.name}")
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    My_AppEsmeraldaTheme {
-        Greeting("Android")
-    }
+    override fun onCapabilityChanged(p0: CapabilityInfo) {}
 }

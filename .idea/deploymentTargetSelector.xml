@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="celular">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-11-13T15:26:32.135427Z">
+        <DropdownSelection timestamp="2025-11-14T17:48:08.873966400Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=RFAX50968HB" />
@@ -15,10 +15,10 @@
       </SelectionState>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-11-13T18:46:21.480456Z">
+        <DropdownSelection timestamp="2025-11-14T19:31:16.814195100Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=RFAX50968HB" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=ZT322K3BGV" />
             </handle>
           </Target>
         </DropdownSelection>
